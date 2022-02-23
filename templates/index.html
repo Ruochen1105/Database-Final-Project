@@ -1,0 +1,53 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="This is a mock air ticket reservation system for CSCI-SHU 213.">
+        <title>Air Ticket Reservation System</title>
+    </head>
+
+    <body>
+        {% with message = get_flashed_messages() %}
+	    {% if message %}
+		    <p>{{message}} </p> </br><hr/>
+	    {% endif %}
+        {% endwith %}
+        <header>
+            <h1>Air Ticket Reservation System</h1>      
+            <a href="/login" target="_blank">login</a>
+            <a href="/register" target="_blank">register</a>
+            <br/>
+            <p>Welcome to the air ticket reservation system!</p>
+            <hr/>
+        </header>
+        
+        <main>
+            <h2>Search for Upcoming Flights:</h2>
+            <form action="/SfF" method="POST">
+                <label for="source">source city/airport name:</label><br/>
+                <input type="text" id="source" name="source"/><br/>
+                <label for="destination">destination city/airport name:</label><br/>
+                <input type="text" id="destination" name="destination"/><br/>
+                <label for "start">start of date:</label><br/>
+                <input type="date" id="start" name="start"/><br/>
+                <label for "end">end of date:</label><br/>
+                <input type="date" id="end" name="end"/><br/>
+                <input type="submit" value = search />
+            </form>
+            <hr/>
+            <h2>Check Flight Status:</h2>
+            <form action="/CFS" method="POST">
+                <label for="fn">flight number:</label><br/>
+                <input type="number" id="fn" name="fn"required/><br/>
+                <label for "start">departure date:</label><br/>
+                <input type="date" id="start" name="start" required/><br/>
+                <label for "end">arrival date:</label><br/>
+                <input type="date" id="end" name="end"required/><br/>
+                <input type="submit" value = search />
+            </form>
+            </table>
+        </main>
+        
+        <footer>
+        </footer>
+    </body>
+</html>

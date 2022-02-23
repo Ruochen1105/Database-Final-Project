@@ -1,0 +1,9 @@
+{%if total==0%}
+<p>The total spending is 0.</p>
+{% endif %}
+{%if total>0%}
+<p>The total spending is {{total}}</p>
+<img src='/static/bar.png'>
+{% endif %}
+<br/><br/><hr/>
+<a href='/lgc'>back</a>

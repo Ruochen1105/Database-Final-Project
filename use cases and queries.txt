@@ -1,0 +1,688 @@
+dif(list1, list2): a self-defined function that takes in two lists and returns the shared items in a new list
+---------------------------------------------------------------------------------------------------------
+My overall logic is that for each user case, the user may input any nubmers of restrictions. I do the query using each of the restriction and get the result respectively. Then I want the shared itmes of all these results, which are the items that meet all the restrictions. 
+---------------------------------------------------------------------------------------------------------
+unlogged use cases:
+______________________________________________________________________________
+	search for flights:
+		query="""select * from flight"""
+		cursor.execute(query)
+		data=cursor.fetchall() #contain all the flights
+	if a source is specified:	
+		cursor.execute("select airport_name from airport where airport_city=%s" , (source,)) #search in the airport table for airport if the user input a city
+		source1=cursor.fetchall()
+		data1=list() #all the airports in the input city, can be empty
+		query1 = "select * from flight where flight.departure_airport = %s"	
+		cursor.execute(query1 , (source,)) #search for flight assuming that the input is an airport
+		data1 += cursor.fetchall()
+		for i in source1: #in case of receiving a city, use every airport in that city to query in the database
+			cursor=conn.cursor()	
+			cursor.execute(query1 , (i[0],))
+			data1 += cursor.fetchall() #all the results are put into the data1 list, which are tuples in a list 
+						#after the last iteration, the data1 contains all flights whose departure city/airport meets the input
+		data=dif(data,data1) # the shared items of all the flights meeting other restrictions (if any) and flgihts meeting the source restriction
+	if a destination is specified:	
+		cursor.execute("select airport_name from airport where airport_city=%s" , (destination,)) #search in the airport table for airport if the user input a city
+		destination1=cursor.fetchall()
+		data1=list()#all the airports in the input city, can be empty
+		query1 = "select * from flight where flight.arrival_airport = %s"
+		cursor.execute(query1 , (destination,)) #search for flight assuming that the input is an airport
+		data1 += cursor.fetchall()
+		for i in destination1: #in case of receiving a city, use every airport in that city to query in the database
+			cursor=conn.cursor()	
+			cursor.execute(query1 , (i[0],))
+			data1 += cursor.fetchall() #all the results are put into the data1 list, which are tuples in a list
+						#after the last iteration, the data1 contains all flights whose destination city/airport meets the input
+		data=dif(data,data1) # the shared items of all the flgihts meeting other restrictions (if any) and flgihts meeting the source restriction
+	if no start time and end time is specified:
+		query1 = "select * from flight where flight.departure_time >= now()" #all the flights that departure after now
+		cursor.execute(query1) 
+		data1=cursor.fetchall()
+		data=dif(data,data1) #the shared items of all the flgihts meeting other restrictions (if any) and flights departure after now
+	if start time is specified:
+		query1 = "select * from flight where flight.departure_time >= %s"  #all the flights whose departure time is after the specified time
+		cursor.execute(query1 , (start,))
+		data1=cursor.fetchall()
+		data=dif(data,data1) #the shared items of all the flgihts meeting other restrictions (if any) and flights whose departure time is after the specified time
+	if end time is sepcified:
+		query1 += "select * from flight where flight.departure_time <= %s"	#all the flights whose arrival time is before the specified time
+		cursor.execute(query1 , (end,))
+		data1=cursor.fetchall()
+		data=dif(data,data1) #the shared items of all the flgihts meeting other restrictions (if any) and flights whose arrival time is before the specified time
+	going through all of these, data contains the flights that meet all the restrictions
+______________________________________________________________________________
+	check flight status: #I assume that the user must input the exact flight number, departure date and arrival date to check the flight status. Otherwise, there might be multiple result and no results. In both scenarios, the web application  will return "invalid input"
+		query="select distinct status from flight" # all the flight status
+		cursor.execute(query)
+		data=cursor.fetchall()
+
+		query1="select distinct status from flight where flight_num=%s" #all the flight status where flight's flight number meets the input
+		cursor.execute(query1 , (fn,))
+		data1=cursor.fetchall()
+		data=dif(data,data1) #status of all the flights that both meet other restrictions and flight number meets the input
+
+		query1+="select distinct status from flight where date(departure_time)=%s" #all the flight status where flight's departure date meets the input
+		cursor.execute(query1 , (start,))
+		data1=cursor.fetchall()
+		data=dif(data,data1) #status of all the flights that both meet other restrictions and departure on the same date as the input
+
+		query1+="select distinct status from flight where date(arrival_time)=%s" #all the flight status where flights' arrival time meets the input
+		cursor.execute(query1 , (end,))
+		data1=cursor.fetchall()
+		data=dif(data,data1) #status of all the flights that both meet other restrictions and arrive on the same date as the input
+	going through all of these, data contains the status of flight meeting all the restrictions
+---------------------------------------------------------------------------------------------------------
+Customer user cases:
+______________________________________________________________________________
+	register:
+		query = "SELECT * FROM customer WHERE email = %s"
+		cursor.execute(query , (email)) #check whether the email has been registered
+		ins = "INSERT INTO customer VALUES(%s, %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)" 
+		cursor.execute(ins, (email,name,hashlib.md5(password.encode()).hexdigest(),building_number,street,city,state,phone_number,passport_number,passport_expiration,passport_country,date_of_birth)) #if not, insert the input information into the database
+______________________________________________________________________________
+	login:
+		query = "SELECT * FROM customer WHERE email = %s and password = %s" 
+		cursor.execute(query, (email, hashlib.md5(password.encode()).hexdigest(),)) #use the input username and password to search for customers. If getting any results, then the logging is permitted
+______________________________________________________________________________
+	view my flights:
+	if upcoming (checkbox) is checked:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s"""
+		cursor.execute(query1 , (session['username'],'upcoming'))
+		data += cursor.fetchall()
+	if inprogress (checkbox) is checked:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s"""
+		cursor.execute(query1 , (session['username'],'in-progress'))
+		data += cursor.fetchall()
+	if delayed (checkbox) is checked:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s"""
+		cursor.execute(query1 , (session['username'],'delayed'))
+		data += cursor.fetchall() 
+#all three queries above search for the flgiht on which the passenger bought a ticket and the flight status meets the restriction. flights whose status meet any of the checked status sill be included into the data list
+	if start time and end time is not specified:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s and flight.departure_time >= %s"""
+		cursor.execute(query1 , (session['username'],str(datetime.datetime.today())))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+#the conditions below are similar: if the user specify any of the restrictions, use that particular restriction to search for flight, and find the shared items between that result and previous results. The shared itmes are flgihts that meet all the restrictions.
+	if source!='': 	
+		cursor.execute("select airport_name from airport where airport_city=%s" , (source,))
+		source1=cursor.fetchall()
+		data1=list()
+		query1 = """SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s and flight.departure_airport = %s"""	
+		cursor.execute(query1 , (session['username'],source))
+		data1 += cursor.fetchall()
+		for i in source1:	
+			cursor.execute(query1 , (session['username'],i[0]))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if destination!='':
+		cursor.execute("select airport_name from airport where airport_city=%s" , (destination,))
+		destination1=cursor.fetchall()
+		data1=list()
+		query1 += """SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s and flight.arrival_airport = %s"""	
+		cursor.execute(query1 , (session['username'],destination))
+		data1 += cursor.fetchall()
+		for i in destination1:	
+			cursor.execute(query1 , (session['username'],i[0]))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if start!='':
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s and flight.departure_time >= %s"""	
+		cursor.execute(query1 , (session['username'],start))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+	if end!='':
+		query1 = """SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) where purchases.customer_email=%s and flight.status = %s and flight.departure_time <= %s"""
+		cursor.execute(query1 , (session['username'],end))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+#going through all the queries above, the data now contains flights meeting all the restrictions
+______________________________________________________________________________
+	search for flights:
+		query="""select *
+			from flight"""
+		cursor.execute(query)
+		data=cursor.fetchall() #get all the flights
+#the conditions below are similar: if the user specify any of the restrictions, use that particular restriction to search for flight, and find the shared items between that result and previous results. The shared itmes are flgihts that meet all the restrictions.
+	if source!='':
+		cursor.execute("select airport_name from airport where airport_city=%s" , (source,)) #in case of user inputting a city
+		source1=cursor.fetchall() #find all the airports in that city
+		data1=list()
+		query1 = """select *
+			from flight where flight.departure_airport = %s"""
+		cursor.execute(query1 , (source,))
+		data1 += cursor.fetchall()
+		for i in source1: #use the found airports to do the query
+			cursor=conn.cursor()	
+			cursor.execute(query1 , (i[0],))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if destination!='':	
+		cursor.execute("select airport_name from airport where airport_city=%s" , (destination,)) #in case of user inputting a city
+		destination1=cursor.fetchall() #find all the airports in that city
+		data1=list()
+		query1 = """"select *
+			from flight where flight.departure_airport = %s where flight.arrival_airport = %s"""	
+		cursor.execute(query1 , (destination,))
+		data1 += cursor.fetchall()
+		for i in destination1: #use the found airports to do the query
+			cursor=conn.cursor()	
+			cursor.execute(query1 , (i[0],))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if start!='':
+		query1 = """select *
+			from flight where flight.departure_airport = %s where flight.departure_time >= %s"""	
+		cursor.execute(query1 , (start,))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+	if end!='':
+		query1 = """"select *
+			from flight where flight.departure_airport = %s where flight.departure_time <= %s"""
+		cursor=conn.cursor()	
+		cursor.execute(query1 , (end,))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+#going through all the queries above, the data now contains flights meeting all the restrictions
+______________________________________________________________________________
+	purchase:
+#I implement the purchase function with the result of "search for flight," all the input below are from the results of "search for flght"
+#an:airline name, fn:flgiht number
+#check for seats:
+		qquery="select count(ticket_id) from ticket where airline_name=%s and flight_num=%s"  #seats bought
+		queryy="select airplane.seats from (flight inner join airplane on flight.airplane_id=airplane.airplane_id) where flight.airline_name=%s and flight.flight_num=%s"  #seats of a plane
+		cursor.execute(qquery, (an,fn))
+		cursor.execute(queryy, (an,fn))
+#check departure time:
+		qqueryy="select departure_time from flight where flight.airline_name=%s and flight.flight_num=%s" 
+		cursor.execute(qqueryy,(an,fn))
+#passing the checks above, do the insertion to complete purchase
+		query="insert into ticket values (%s,%s,%s)"
+		query1="insert into purchases(ticket_id,customer_email,purchase_date) values (%s,%s,%s)"
+		cursor.execute(query , (ticket_count,an,fn,)) 
+		cursor.execute(query1 , (ticket_count,session['username'],str(datetime.date.today()),))
+______________________________________________________________________________
+	track my spending:
+		if time not specified:
+			query1+="""select flight.price, purchases.purchase_date
+				from ((flight inner join ticket on flight.flight_num=ticket.flight_num and flight.airline_name=ticket.airline_name)
+				inner join purchases on ticket.ticket_id=purchases.ticket_id)
+				where purchases.customer_email=%s and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 6 MONTH)"""
+			cursor.execute(query1 , (session['username'],))		
+			spending=cursor.fetchall() #every purchase with price and date, for plotting
+			query1="""select sum(flight.price)
+				from ((flight inner join ticket on flight.flight_num=ticket.flight_num and flight.airline_name=ticket.airline_name)
+				inner join purchases on ticket.ticket_id=purchases.ticket_id)
+				where purchases.customer_email=%s and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR)"""
+			cursor.execute(query1 , (session['username'],))
+			all=cursor.fetchone()[0] #sum of price
+		if time specified:
+			cursor.execute("""select flight.price, purchases.purchase_date
+					from ((flight inner join ticket on flight.flight_num=ticket.flight_num and flight.airline_name=ticket.airline_name)
+					inner join purchases on ticket.ticket_id=purchases.ticket_id)
+					where purchases.customer_email=%s""" , (session['username'],))
+			spending=cursor.fetchall()
+			if start time specified:
+				query1="""select flight.price, purchases.purchase_date
+					from ((flight inner join ticket on flight.flight_num=ticket.flight_num and flight.airline_name=ticket.airline_name)
+					inner join purchases on ticket.ticket_id=purchases.ticket_id)
+					where purchases.customer_email=%s and purchases.purchase_date>=%s"""
+				cursor.execute(query1 , (session['username'],start))
+				spending1=cursor.fetchall()
+				spending=dif(spending,spending1)
+			if end!='':
+				query1="""select flight.price, purchases.purchase_date
+					from ((flight inner join ticket on flight.flight_num=ticket.flight_num and flight.airline_name=ticket.airline_name)
+					inner join purchases on ticket.ticket_id=purchases.ticket_id)
+					where purchases.customer_email=%s and purchases.purchase_date<=%s"""
+				cursor.execute(query1 , (session['username'],end))
+				spending1=cursor.fetchall()
+				spending=dif(spending,spending1)
+			#now spending is the list of all the price of  tickets which are purchased in the specified range of time
+---------------------------------------------------------------------------------------------------------
+Booking Agent user cases:
+______________________________________________________________________________
+	register:
+		query = "SELECT * FROM booking_agent WHERE email = %s"
+		cursor.execute(query , (email)) #check whether the email has been registered
+		ins = "INSERT INTO booking_agent VALUES(%s, %s,%s)" 
+		cursor.execute(ins, (email, hashlib.md5(password.encode()).hexdigest(), booking_agent_id,))
+______________________________________________________________________________
+	login:
+		query = "SELECT * FROM booking_agent WHERE email = %s and password = %s" 
+		cursor.execute(query, (email, hashlib.md5(password.encode()).hexdigest(),)) #use the input username and password to search for booking agent. If getting any results, then the logging is permitted
+______________________________________________________________________________
+	view my flights:
+	queryy = "select booking_agent_id from booking_agent where email = %s"
+	cursor.execute(queryy , (session['username'],)) #get the booking agent id from username, denote as id
+#very similar to the "view my flights" case of the customer
+	if upcoming (checkbox) is checked:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s"""
+		cursor.execute(query1 , (id,'upcoming'))
+		data += cursor.fetchall()
+	if inprogress (checkbox) is checked:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s"""
+		cursor.execute(query1 , (id],'in-progress'))
+		data += cursor.fetchall()
+	if delayed (checkbox) is checked:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s"""
+		cursor.execute(query1 , (id,'delayed'))
+		data += cursor.fetchall() 
+#all three queries above search for the flgiht on which the passenger bought a ticket and the flight status meets the restriction. flights whose status meet any of the checked status sill be included into the data list
+	if start time and end time is not specified:
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s and flight.departure_time >= %s"""
+		cursor.execute(query1 , (id,str(datetime.datetime.today())))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+#the conditions below are similar: if the user specify any of the restrictions, use that particular restriction to search for flight, and find the shared items between that result and previous results. The shared itmes are flgihts that meet all the restrictions.
+	if source!='': 	
+		cursor.execute("select airport_name from airport where airport_city=%s" , (source,))
+		source1=cursor.fetchall()
+		data1=list()
+		query1 = """SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s and flight.departure_airport = %s"""	
+		cursor.execute(query1 , (id,source))
+		data1 += cursor.fetchall()
+		for i in source1:	
+			cursor.execute(query1 , (session['username'],i[0]))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if destination!='':
+		cursor.execute("select airport_name from airport where airport_city=%s" , (destination,))
+		destination1=cursor.fetchall()
+		data1=list()
+		query1 += """SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s and flight.arrival_airport = %s"""	
+		cursor.execute(query1 , (id,destination))
+		data1 += cursor.fetchall()
+		for i in destination1:	
+			cursor.execute(query1 , (session['username'],i[0]))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if start!='':
+		query1 ="""SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s and flight.departure_time >= %s"""	
+		cursor.execute(query1 , (id,start))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+	if end!='':
+		query1 = """SELECT * FROM 
+			((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num) 
+				inner join purchases on ticket.ticket_id=purchases.ticket_id) purchases.booking_agent_id=%s and flight.status = %s and flight.departure_time <= %s"""
+		cursor.execute(query1 , (id,end))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+#going through all the queries above, the data now contains flights meeting all the restrictions
+______________________________________________________________________________
+	search for flights:
+#same as "search for flgihts" for customers		
+		query="""select *
+			from flight"""
+		cursor.execute(query)
+		data=cursor.fetchall() #get all the flights
+#the conditions below are similar: if the user specify any of the restrictions, use that particular restriction to search for flight, and find the shared items between that result and previous results. The shared itmes are flgihts that meet all the restrictions.
+	if source!='':
+		cursor.execute("select airport_name from airport where airport_city=%s" , (source,)) #in case of user inputting a city
+		source1=cursor.fetchall() #find all the airports in that city
+		data1=list()
+		query1 = """select *
+			from flight where flight.departure_airport = %s"""
+		cursor.execute(query1 , (source,))
+		data1 += cursor.fetchall()
+		for i in source1: #use the found airports to do the query
+			cursor=conn.cursor()	
+			cursor.execute(query1 , (i[0],))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if destination!='':	
+		cursor.execute("select airport_name from airport where airport_city=%s" , (destination,)) #in case of user inputting a city
+		destination1=cursor.fetchall() #find all the airports in that city
+		data1=list()
+		query1 = """"select *
+			from flight where flight.departure_airport = %s where flight.arrival_airport = %s"""	
+		cursor.execute(query1 , (destination,))
+		data1 += cursor.fetchall()
+		for i in destination1: #use the found airports to do the query
+			cursor=conn.cursor()	
+			cursor.execute(query1 , (i[0],))
+			data1 += cursor.fetchall()
+		data=dif(data,data1)
+	if start!='':
+		query1 = """select *
+			from flight where flight.departure_airport = %s where flight.departure_time >= %s"""	
+		cursor.execute(query1 , (start,))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+	if end!='':
+		query1 = """"select *
+			from flight where flight.departure_airport = %s where flight.departure_time <= %s"""
+		cursor=conn.cursor()	
+		cursor.execute(query1 , (end,))
+		data1=cursor.fetchall()
+		data=dif(data,data1)
+#going through all the queries above, the data now contains flights meeting all the restrictions
+______________________________________________________________________________
+	purchase:
+#I implement the purchase function with the result of "search for flight," all the input below are from the results of "search for flght"
+#an:airline name, fn:flgiht number
+#check for seats:
+		qquery="select count(ticket_id) from ticket where airline_name=%s and flight_num=%s"  #seats bought
+		queryy="select airplane.seats from (flight inner join airplane on flight.airplane_id=airplane.airplane_id) where flight.airline_name=%s and flight.flight_num=%s"  #seats of a plane
+		cursor.execute(qquery, (an,fn))
+		cursor.execute(queryy, (an,fn))
+#check departure time:
+		qqueryy="select departure_time from flight where flight.airline_name=%s and flight.flight_num=%s" 
+		cursor.execute(qqueryy,(an,fn))
+#passing the checks above, do the insertion to complete purchase
+		query="insert into ticket values (%s,%s,%s)"
+		query1="insert into purchases values(%s,%s,%s,%s)"
+		cursor.execute(query , (ticket_count,an,fn,)) 
+		cursor.execute(query1 , (ticket_count,customer,id,str(datetime.date.today()),))
+______________________________________________________________________________
+	view my commision:
+		if time is not specified:
+			query1="""select flight.price,ticket.ticket_id
+				from ((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+				inner join (booking_agent inner join purchases on purchases.booking_agent_id=booking_agent.booking_agent_id) on purchases.ticket_id=ticket.ticket_id)
+				where booking_agent.email=%s and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 30 DAY)"""
+			cursor.execute(query1 , (session['username'],))
+			commission=cursor.fetchall()
+		if time is specified:
+			cursor.execute("""select flight.price,ticket.ticket_id
+				from ((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+				inner join (booking_agent inner join purchases on purchases.booking_agent_id=booking_agent.booking_agent_id) on purchases.ticket_id=ticket.ticket_id)
+				where booking_agent.email=%s""" , (session['username'],))
+			commission=cursor.fetchall()
+			if start time is specified:
+				query1="""select flight.price,ticket.ticket_id
+					from ((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+					inner join (booking_agent inner join purchases on purchases.booking_agent_id=booking_agent.booking_agent_id) on purchases.ticket_id=ticket.ticket_id)
+					where booking_agent.email=%s and purchases.purchase_date>=%s"""
+				cursor.execute(query1 , (session['username'],start))
+				commission1=cursor.fetchall()
+				commission=dif(commission,commission1)
+			if end time is specified:
+				query1="""select flight.price,ticket.ticket_id
+					from ((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+					inner join (booking_agent inner join purchases on purchases.booking_agent_id=booking_agent.booking_agent_id) on purchases.ticket_id=ticket.ticket_id)
+					where booking_agent.email=%s and purchases.purchase_date<=%s"""
+				cursor.execute(query1 , (session['username'],end))
+				commission1=cursor.fetchall()
+				commission=dif(commission,commission1)
+			#now commission contains all flgiht price, ticket id pair whose purchase date is within the given range of time
+______________________________________________________________________________
+	view top customers:
+		query1="""select count(purchases.ticket_id) as count,purchases.customer_email
+			from ((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+			inner join (booking_agent inner join purchases on purchases.booking_agent_id=booking_agent.booking_agent_id) on purchases.ticket_id=ticket.ticket_id)
+			where purchases.purchase_date>=DATE_SUB(now(), INTERVAL 6 MONTH) and purchases.booking_agent_id=%s
+			group by purchases.customer_email
+			order by count DESC limit 5""" 
+		query2="""select 0.1*sum(flight.price) as aall,purchases.customer_email
+			from ((flight inner join ticket on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+			inner join (booking_agent inner join purchases on purchases.booking_agent_id=booking_agent.booking_agent_id) on purchases.ticket_id=ticket.ticket_id)
+			where purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR) and purchases.booking_agent_id=%s
+			group by purchases.customer_email
+			order by aall DESC limit 5""" 
+		cursor.execute(query1, (id,))
+		customers1=cursor.fetchall()
+		cursor.execute(query2, (id,))
+		customers2=cursor.fetchall()
+---------------------------------------------------------------------------------------------------------
+Airline Staff:
+______________________________________________________________________________
+	register:
+		query = "SELECT * FROM airline_staff WHERE email = %s"
+		cursor.execute(query , (email)) #check whether the email has been registered
+		"INSERT INTO airline_staff VALUES(%s, %s,%s,%s,%s,%s)"
+		cursor.execute(ins, (username, hashlib.md5(password.encode()).hexdigest(),first_name,last_name,date_of_birth,airline_name,))
+______________________________________________________________________________
+	login:
+		query = "SELECT * FROM airline_stafff WHERE email = %s and password = %s" 
+		cursor.execute(query, (email, hashlib.md5(password.encode()).hexdigest(),)) #use the input username and password to search for booking agent. If getting any results, then the logging is permitted
+______________________________________________________________________________
+	view my flights:
+#similar to "view my flights" case of customers
+	if time not specified:
+		query="""select *
+			from flight
+			where flight.airline_name=(select airline_name from airline_staff where username=%s)
+			and (TO_DAYS(flight.departure_time) - TO_DAYS(NOW())) between 0 and 30""" #flights in the upcoming 30 days
+		cursor.execute(query , (session['username'],))
+		data=cursor.fetchall()
+		if source specified:
+			cursor.execute("select airport_name from airport where airport_city=%s" , (source,))
+			source1=cursor.fetchall()
+			data1=list()
+			query1 = """select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s)
+				and (TO_DAYS(flight.departure_time) - TO_DAYS(NOW())) between 0 and 30 and flight.departure_airport = %s"""	
+			cursor.execute(query1 , (session['username'],source))
+			data1 += cursor.fetchall()
+			for i in source1:	
+				cursor.execute( """select *
+					from flight
+					where flight.airline_name=(select airline_name from airline_staff where username=%s)
+					and (TO_DAYS(flight.departure_time) - TO_DAYS(NOW())) between 0 and 30 and flight.departure_airport = %s" , (session['username'],i[0]))
+					data1 += cursor.fetchall()
+			data=dif(data,data1)
+		if destination specified:	
+			cursor.execute("select airport_name from airport where airport_city=%s" , (destination,))
+			destination1=cursor.fetchall()
+			data1=list()
+			query1 = """select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s)
+				and (TO_DAYS(flight.departure_time) - TO_DAYS(NOW())) between 0 and 30 and flight.arrival_airport = %s"""	
+			cursor.execute(query1 , (session['username'],destination))
+			data1 += cursor.fetchall()
+			for i in destination1:	
+				cursor.execute(query1 , (session['username'],i[0]))
+				data1 += cursor.fetchall()
+			data=dif(data,data1)
+	#going through all the queries above, the data now contains flights meeting all the restrictions
+	if time specified:
+		cursor.execute("""select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s)""" , (session['username'],))
+		data=cursor.fetchall()
+		if source specified:	
+			cursor.execute("select airport_name from airport where airport_city=%s" , (source,))
+			source1=cursor.fetchall()
+			data1=list()
+			query1=query
+			query1 = """"select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s) flight.departure_airport = %s"""	
+			cursor.execute(query1 , (session['username'],source,))
+			data1 += cursor.fetchall()
+			for i in source1:	
+				cursor.execute(query1 , (session['username'],i[0],))
+				data1 += cursor.fetchall()
+			data=dif(data,data1)
+		if destination specified:	
+			cursor.execute("select airport_name from airport where airport_city=%s" , (destination,))
+			destination1=cursor.fetchall()
+			data1=list()
+			query1 = """select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s) flight.arrival_airport = %s"""
+			cursor.execute(query1 , (session['username'],destination,))
+			data1 += cursor.fetchall()
+			for i in destination1:	
+				cursor.execute(query1 , (session['username'],i[0],))
+				data1 += cursor.fetchall()
+			data=dif(data,data1)
+		if start time specified:
+			query1 += """select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s) and flight.departure_time >= %s"""
+			cursor.execute(query1 , (session['username'],start,))
+			data1=cursor.fetchall()
+			data=dif(data,data1)
+		if end time specified:
+			query1 +="""select *
+				from flight
+				where flight.airline_name=(select airline_name from airline_staff where username=%s) and flight.departure_time <= %s"""
+			cursor.execute(query1 , (session['username'],end,))
+			data1=cursor.fetchall()
+			data=dif(data,data1)
+	#going through all the queries above, the data now contains flights meeting all the restrictions
+______________________________________________________________________________
+	create new flights:
+#get the airline name
+		cursor=conn.cursor()
+		cursor.execute("select airline_name from airline_staff where username=%s" , (session['username'],))
+		an=cursor.fetchall()[0][0]
+#insert
+#an: airline name, fn: flight number, da: departuure airport, dt:departure time, aa: arrival airport, at: arrival time, p: price, s: status, ai: airplane id
+		query="insert into flight values(%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+		cursor.execute(query , (an,fn,da,dt,aa,at,p,s,ai))
+______________________________________________________________________________
+	change status of flights:
+#get the airline name
+		cursor.execute("select airline_name from airline_staff where username=%s" , (session['username'],))
+		an=cursor.fetchall()[0][0]
+#insert
+#st:status, fn: flight numer, an:airline name
+		cursor.execute("""update flight
+			set flight.status=%s
+			where flight.airline_name=%s and flight.flight_num=%s""" , (st,an,fn))
+______________________________________________________________________________
+ 	add airplane in the system
+#get the airline name
+		cursor.execute("select airline_name from airline_staff where username=%s" , (session['username'],))
+		an=cursor.fetchall()[0][0]
+#insert
+#an: airline name, ai:airplane id
+		cursor.execute("insert into airplane values(%s,%s,%s)", (an,ai,seats))
+______________________________________________________________________________
+	add new airports in the system
+#an: airport name, ac: airport city
+		cursor.execute("insert into airport values(%s,%s)" , (an,ac))
+______________________________________________________________________________
+	view all the booking agent
+	query1="""select count(purchases.ticket_id) as cnt,booking_agent.email
+			from ((booking_agent inner join purchases on booking_agent.booking_agent_id=purchases.booking_agent_id)
+			inner join (ticket inner join flight on ticket.flight_num=flight.flight_num and ticket.airline_name=flight.airline_name) on purchases.ticket_id=ticket.ticket_id)
+			where (purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 MONTH) and ticket.airline_name=(select airline_name from airline_staff where username=%s))
+			group by booking_agent.email
+			order by cnt DESC limit 5""" #last 1 month number of tickets sold
+	query2="""select count(purchases.ticket_id) as cnt,booking_agent.email
+			from ((booking_agent inner join purchases on booking_agent.booking_agent_id=purchases.booking_agent_id)
+			inner join (ticket inner join flight on ticket.flight_num=flight.flight_num and ticket.airline_name=flight.airline_name) on purchases.ticket_id=ticket.ticket_id)
+			where (purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR)  and ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s))
+			group by booking_agent.email
+			order by cnt DESC limit 5""" #last 1 year number of tickets sold
+	query3="""select 0.1*sum(flight.price) as com,booking_agent.email
+			from ((booking_agent inner join purchases on booking_agent.booking_agent_id=purchases.booking_agent_id)
+			inner join (ticket inner join flight on ticket.flight_num=flight.flight_num and ticket.airline_name=flight.airline_name) on purchases.ticket_id=ticket.ticket_id)
+			where (purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR) and ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s))
+			group by booking_agent.email
+			order by com DESC limit 5""" #last 1 year commission earned
+	cursor.execute(query1, (session['username'],))
+	cursor.execute(query2, (session['username'],))
+	cursor.execute(query3, (session['username'],))
+______________________________________________________________________________
+	view frequent  customers
+		cursor.execute("""select count(ticket.ticket_id) as cnt,purchases.customer_email
+			from (purchases inner join ticket on purchases.ticket_id=ticket.ticket_id)
+			where (select airline_staff.airline_name from airline_staff where airline_staff.username=%s)=ticket.airline_name
+			and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR)
+			group by purchases.customer_email
+			order by cnt DESC""" , (session['username'],))
+______________________________________________________________________________
+	view reports:
+	query1="""select purchases.purchase_date
+			from purchases inner join ticket on purchases.ticket_id=ticket.ticket_id
+			where ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s) and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 MONTH)"""
+	cursor.execute(query1 , (session['username'],))
+	query2="""select purchases.purchase_date
+			from purchases inner join ticket on purchases.ticket_id=ticket.ticket_id
+			where ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s) and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR)"""
+	cursor.execute(query2 , (session['username'],))
+#if time specifed, the case below will execute. otherwise, they are omitted	
+	if time specified:
+		cursor.execute("""select purchases.purchase_date
+			from purchases inner join ticket on purchases.ticket_id=ticket.ticket_id
+			where ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s)""" , (session['username'],))
+		data=cursor.fetchall()
+		if start specified:
+			query3="""select purchases.purchase_date
+			from purchases inner join ticket on purchases.ticket_id=ticket.ticket_id
+			where ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s) and purchases.purchase_date >= %s"""	
+			cursor.execute(query3 , (session['username'],start))
+			data1=cursor.fetchall()
+			data=dif(data,data1)
+		if end specified:
+			query1 = """select purchases.purchase_date
+			from purchases inner join ticket on purchases.ticket_id=ticket.ticket_id
+			where ticket.airline_name=(select airline_name from airline_staff where airline_staff.username=%s) and purchases.purchase_date <= %s"""
+			cursor.execute(query1 , (session['username'],end))
+			data1=cursor.fetchall()
+			data=dif(data,data1)
+	#data contains all the purchase information that meets the restrictions
+______________________________________________________________________________
+	comparison of revenue earned:
+		queryclm="""select sum(flight.price)
+			from ((purchases inner join ticket on purchases.ticket_id=ticket.ticket_id)
+			inner join flight on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+			where ticket.airline_name=(select airline_name from airline_staff where username=%s) and purchases.booking_agent_id is null and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 MONTH)""" #customer last month
+		querycly="""select sum(flight.price)
+			from ((purchases inner join ticket on purchases.ticket_id=ticket.ticket_id)
+			inner join flight on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+			where ticket.airline_name=(select airline_name from airline_staff where username=%s) and purchases.booking_agent_id is null and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR)""" #customer last year
+		queryblm="""select sum(flight.price)
+			from ((purchases inner join ticket on purchases.ticket_id=ticket.ticket_id)
+			inner join flight on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+			where ticket.airline_name=(select airline_name from airline_staff where username=%s) and purchases.booking_agent_id is not null and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 MONTH)""" #booking agent last month
+		querybly="""select sum(flight.price)
+			from ((purchases inner join ticket on purchases.ticket_id=ticket.ticket_id)
+			inner join flight on flight.airline_name=ticket.airline_name and flight.flight_num=ticket.flight_num)
+			where ticket.airline_name=(select airline_name from airline_staff where username=%s) and purchases.booking_agent_id is not null and purchases.purchase_date>=DATE_SUB(now(), INTERVAL 1 YEAR)""" #booking agent last year
+		cursor.execute(queryclm, (session['username'],))
+		cursor.execute(querycly, (session['username'],))
+		cursor.execute(queryblm, (session['username'],))
+		cursor.execute(querybly, (session['username'],))
+______________________________________________________________________________
+	view top destination:
+	querym="""select count(airport.airport_city),airport_city
+			from flight inner join airport on flight.arrival_airport=airport.airport_name
+            			where flight.airline_name=(select airline_name from airline_staff where username=%s) and flight.arrival_time>=DATE_SUB(now(), INTERVAL 1 MONTH) and flight.departure_time<=now()
+            			group by airport_city
+            			order by count(airport_city) DESC limit 3""" #last month
+	queryy="""select count(airport.airport_city) as cnt,airport.airport_city
+			from flight inner join airport on flight.arrival_airport=airport.airport_name
+			where flight.airline_name=(select airline_name from airline_staff where username=%s) and flight.arrival_time>=DATE_SUB(now(), INTERVAL 1 YEAR) and flight.departure_time<=now()
+			group by airport.airport_city
+			order by count(airport_city) DESC limit 3""" #last year
+	cursor.execute(querym, (session['username'],))
+	cursor.execute(queryy, (session['username'],))

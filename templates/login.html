@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="This is a mock air ticket reservation system for CSCI-SHU 213.">
+        <title>Login</title>
+    </head>
+
+    <body>
+        {% with message = get_flashed_messages() %}
+	    {% if message %}
+		    <p>{{message}} </p> </br><hr/>
+	    {% endif %}
+        {% endwith %}
+        {% if error %}
+            <p>{{error}}</hr></br></p>
+        {% endif %}
+        <h2>Log in as a:</h2>  
+            <a href="/login_c">customer</a>
+            <a href="/login_b">booking_agent</a>
+            <a href="/login_s">staff</a>
+    <br/>
+    <a href="/">Go back</a>
+    </body>
+</html>

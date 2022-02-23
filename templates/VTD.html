@@ -1,0 +1,23 @@
+<p>last month:</p>
+<table border='8'>
+    <th>Counts</th>
+    <th>Destination</th>
+{% for line in m %}
+    <tr>
+		<td>{{line[0]}}</td>
+        <td>{{line[1]}}</td>
+    </tr>
+{% endfor %}
+</table><br/><hr/>
+<p>last year:</p>
+<table border='8'>
+    <th>Counts</th>
+    <th>Destination</th>
+{% for line in y %}
+    <tr>
+		<td>{{line[0]}}</td>
+        <td>{{line[1]}}</td>
+    </tr>
+{% endfor %}
+</table><br/><hr/>
+<a href='/lgs'>back</a>

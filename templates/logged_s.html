@@ -1,0 +1,110 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="This is a mock air ticket reservation system for CSCI-SHU 213.">
+    <title>{{username}}</title>
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <p>{{ messages }}</p>
+            <br/><hr/>
+        {% endif %}
+    {% endwith %}
+    <p>View My Flights</p>
+    <form action='/VMF_s' method='POST'>
+        <label for "start">start of date:</label><br/>
+        <input type="date" id="start" name="start"/><br/>
+        <label for "end">end of date:</label><br/>
+        <input type="date" id="end" name="end"/><br/>
+        <label for="source">source city/airport name:</label><br/>
+        <input type="text" id="source" name="source"/><br/>
+        <label for="destination">destination city/airport name:</label><br/>
+        <input type="text" id="destination" name="destination"/><br/>
+        <input type="submit" value = search>
+    </form>
+    <br/><hr/>
+    <p>Create New Flights</p>
+    <form action='/CNF' method='POST'>
+        <label for "fn">Flight Number:</label><br/>
+        <input type="number" id="fn" name="fn" required/><br/>
+        <label for "da">Departure Airport:</label></br>
+        <input type="text" id="da" name="da" required/><br/>
+        <label for "dt">Departure Time:</label><br/>
+        <input type="datetime-local" id="dt" name="dt" required/><br/>
+        <label for "aa">Arrival Airport:</label><br/>
+        <input type="text" id="aa" name="aa" required/><br/>
+        <label for "at">Arrival Time:</label><br/>
+        <input type="datetime-local" id="at" name="at" required/><br/>
+        <label for "p">Price:</label><br/>
+        <input type="number" id="p" name="p" required/><br/>
+        <label for "s">Status:</label><br/>
+        <input type="text" id="s" name="s" required/><br/>
+        <label for "ai">Airplane ID:</label><br/>
+        <input type="number" id="ai" name="ai" required/><br/>
+        <input type="submit" value= create>
+    </form>
+    <br/><hr/>
+    <p>Change Status of Flights</p>
+    <form action='/CSoF' method='POST'>
+        <label for 'fn'>Flight number:</label>
+        <input type='number' id='fn' name='fn' required/><br/>
+        <label for 'st'>Status:</label>
+        <select id='st' name='st'>
+            <option value='upcoming'>upcoming</option>
+            <option value='in progress'>in progress</option>
+            <option value='delayed'>delayed</option>
+        </select><br/>
+        <input type='submit' value= Change>
+    </form>
+    <br/><hr/>
+    <p>Add Airplane In the System</p>
+    <form action='/AAItS' method='POST'>
+        <label for 'ai'>Airplane id:</label>
+        <input type='number' id='ai' name='ai' required/><br/>
+        <label for 'seats'>Seats:</label>
+        <input type='number' id='seats' name='seats' required/><br/>
+        <input type='submit' value= add>
+    </form>
+    <br/><hr/>
+    <p>Add New Airport In the System</p>
+    <form action='/ANAItS' method='POST'>
+        <label for 'an'>Airport name:</label>
+        <input type='text' id='an' name='an' required/><br/>
+        <label for 'ac'>Airport city:</label>
+        <input type='text' id='ac' name='ac' required/><br/>
+        <input type='submit' value= add>
+    </form>
+    <br/><hr/>
+    <p>View All the Booking Agents</p>
+    <form action='/VAtBA' method='POST'>
+        <input type='submit' value= view>
+    </form>
+    <br/><hr/>
+    <p>View Frequent Customers</p>
+    <form action='/VFC' method='POST'>
+        <input type='submit' value= view>
+    </form>
+    <br/><hr/>
+    <p>View Reports</p>
+    <form action='/VR' method='POST'>
+        <label for 'start'>start: </label>
+        <input type='date' id='start'name='start'><br/>
+        <label for 'end'>end: </label>
+        <input type='date' id='end' name='end'><br/>
+        <input type='submit' value= view>
+    </form>
+    <br/><hr/>
+    <p>Comparison of Revenue Earned</p>
+    <form action='/CoRE' method='POST'>
+        <input type='submit' value= view>
+    </form>
+    <br/><hr/>
+    <p>View Top Destination</p>
+    <form action='/VTD' method='POST'>
+        <input type='submit' value=view>
+    </form> 
+    <br/><hr/>   
+    <a href='/logout'>Logout</a>
+</body>
+</html>

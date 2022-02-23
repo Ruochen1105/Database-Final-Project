@@ -1,0 +1,59 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="description" content="This is a mock air ticket reservation system for CSCI-SHU 213.">
+    <title>{{username}}</title>
+</head>
+<body>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <p>{{ messages }}</p>
+            <br/><hr>
+        {% endif %}
+    {% endwith %}
+    <p>View My Flights</p>
+    <form action="/VMF_b" method="POST">
+        <div><input type="checkbox" id = "upcoming" name = "upcoming" checked/>
+        <label for="upcoming">upcoming</label></div>
+        <div><input type="checkbox" id = "inprogress" name = "inprogress"/>
+        <label for "inprogress">in-progress</label></div>
+        <div><input type="checkbox" id = "delayed" name = "delayed"/>
+        <label for "delayed">delayed</label></div>
+        <label for="source">source city/airport name:</label><br/>
+        <input type="text" id="source" name="source"/><br/>
+        <label for="destination">destination city/airport name:</label><br/>
+        <input type="text" id="destination" name="destination"/><br/>
+        <label for="start">start:</label><br/>
+        <input type="date" id="start" name="start"/><br/>
+        <label for="end">end:</label><br/>
+        <input type="date" id="end" name="end"/><br/>
+        <input type="submit" value = View />
+    </form>
+    <br/><hr/>
+    <p>Search for Flights</p>
+    <form action="/SfF_b" method="POST">
+        <label for="source">source city/airport name:</label><br/>
+        <input type="text" id="source" name="source"/><br/>
+        <label for="destination">destination city/airport name:</label><br/>
+        <input type="text" id="destination" name="destination"/><br/>
+        <label for="start">start:</label><br/>
+        <input type="date" id="start" name="start"/><br/>
+        <label for="end">end:</label><br/>
+        <input type="date" id="end" name="end"/><br/>
+        <input type="submit" value = search />
+    </form>
+    <br/><hr/>
+    <p>View my Commission</p>
+    <form action='VmC' method='POST'>
+        <label for "start">start of date:</label><br/>
+        <input type="date" id="start" name="start"/><br/>
+        <label for "end">end of date:</label><br/>
+        <input type="date" id="end" name="end"/><br/>
+        <input type="submit" value = track>
+    </form>
+    <br/><hr/>
+    <a href='/VTC'>View Top Customers</p>
+    <br/><hr/>
+    <a href='/logout'>Logout</a>
+</body>
+</html>

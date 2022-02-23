@@ -1,0 +1,32 @@
+<table border='8'>
+    <th>Nubmer of Tickets Sales for the Past Month</th>
+    <th>Booking Agents</th>
+    {% for line in a1 %}
+	<tr>
+		<td>{{line[0]}}</td>
+        <td>{{line[1]}}</td>
+    	</tr>
+    {% endfor %}
+</table>
+<table border='8'>
+    <th>Nubmer of Tickets Sales for the Past Year</th>
+    <th>Booking Agents</th>
+    {% for line in a2 %}
+	<tr>
+		<td>{{line[0]}}</td>
+        <td>{{line[1]}}</td>
+    	</tr>
+    {% endfor %}
+</table>
+<table border='8'>
+    <th>Amount of Commission Received</th>
+    <th>Booking Agents</th>
+    {% for line in a3 %}
+	<tr>
+		<td>{{line[0]}}</td>
+        <td>{{line[1]}}</td>
+    	</tr>
+    {% endfor %}
+</table>
+<br/><hr/>
+<a href='/lgs'>back</a>

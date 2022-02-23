@@ -1,0 +1,88 @@
+<table border='8'>
+	<th>Airline Name</th>
+	<th>Flight Nubmer</th>
+    <th>Departure Airport</th>
+    <th>Departure Time</th>
+    <th>Arrival Airport</th>
+    <th>Arrival Time</th>
+    <th>Price</th>
+    <th>Status</th>
+    <th>Airplane ID</th>
+    {%if extra=='True'%}
+    {%if identity=='b'%}
+        <th>Purchase</th>
+    {% endif %}
+    {%if identity=='c'%}
+        <th>Purchase</th>
+    {% endif %}
+    {%if identity=='s'%}
+        <th>View Customers</th>
+    {% endif %}
+    {% endif %}
+    {%if extra!='True'%}
+    {%if identity=='b'%}
+        <th>Customer</th>
+    {% endif %}
+    {% endif %}
+{% for line in data %}
+	<tr>
+		<td>{{line[0]}}</td>
+		<td>{{line[1]}}</td>
+        <td>{{line[2]}}</td>
+        <td>{{line[3]}}</td>
+        <td>{{line[4]}}</td>
+        <td>{{line[5]}}</td>
+        <td>{{line[6]}}</td>
+        <td>{{line[7]}}</td>
+        <td>{{line[8]}}</td>
+        {%if extra=='True'%}
+        {%if identity=='c'%}
+            <td>
+                <form action='/purchase_c' method='POST'>
+                <input type="hidden" name="an" value='{{line[0]}}'>
+                <input type="hidden" name="fn" value='{{line[1]}}'>
+                <input type="submit" value = Purchase>
+                </form>
+            </td>
+        {% endif %}	
+        {%if identity=='b'%}
+            <td>
+                <form action='/purchase_b' method='POST'>
+                <input type="hidden" name="an" value='{{line[0]}}'>
+                <input type="hidden" name="fn" value='{{line[1]}}'>
+                <label>customer email:</label>
+                <input type='text' name='cust' id='cust' required>
+                <input type="submit" value = Purchase>
+                </form>
+            </td>
+        {% endif %}
+        {%if identity=='s'%}
+            <td>
+                <form action='/VC' method='POST'>
+                <input type="hidden" name="an" value='{{line[0]}}'>
+                <input type="hidden" name="fn" value='{{line[1]}}'>
+                <input type="submit" value = View>
+                </form>
+            </td>
+        {% endif %}	
+        {% endif %}	
+        {%if extra!='True'%}
+        {%if identity=='b'%}
+            <td>{{line[13]}}</td>
+        {% endif %}
+        {% endif %}
+	</tr>
+{% endfor %}
+</table><br/><br/><hr/>
+{%if identity=='b'%}
+<a href='/lgb'>back</a>
+{% endif %}
+{%if identity=='c'%}
+<a href='/lgc'>back</a>
+{% endif %}
+{%if identity=='s'%}
+<a href='/lgs'>back</a>
+{% endif %}
+{%if identity!='s' and identity!='b' and identity!='c'%}
+<a href='/'>back</a>
+{% endif %}

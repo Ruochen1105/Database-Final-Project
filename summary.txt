@@ -1,0 +1,2 @@
+Ruochen Miao(rm5327): flask, SQL, html, testing and debugging
+Hanqi Deng(hd1073): mock data, SQL

@@ -1,0 +1,12 @@
+<table border='8'>
+    <th>Nubmer of Tickets</th>
+    <th>Customers</th>
+    {% for line in cus %}
+	<tr>
+		<td>{{line[0]}}</td>
+        <td>{{line[1]}}</td>
+    	</tr>
+    {% endfor %}
+</table>
+<br/><hr/>
+<a href='/lgs'>back</a>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="description" content="This is a mock air ticket reservation system for CSCI-SHU 213.">
+        <title>Registration</title>
+    </head>
+
+    <body>
+        {% if error %}
+            <p>{{error}}</hr></br></p>
+        {% endif %}
+        <h2>Register as a:</h2>  
+            <a href="/register_c">customer</a>
+            <a href="/register_b">booking_agent</a>
+            <a href="/register_s">staff</a>
+    <br/>
+    <a href="/">Go back</a>
+    </body>
+</html>
